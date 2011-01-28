@@ -14,10 +14,10 @@ class Olut(object):
     DEFAULT_INSTALL_PATH = "/var/olut"
     
     def __init__(self, install_path=None, ignore_filename_re=None):
-        self.install_path = install_path or self.DEFAULT_INSTALL_PATH
+        self.install_path = install_path or os.getenv("OLUT_INSTALL_PATH") or self.DEFAULT_INSTALL_PATH
         if not os.path.exists(self.install_path):
             os.makedirs(self.install_path)
-        self.ignore_filename_re = ignore_filename_re or self.DEFAULT_IGNORE_FILENAME_RE
+        self.ignore_filename_re = ignore_filename_re or os.getenv("OLUT_IGNORE_FILENAME_RE") or self.DEFAULT_IGNORE_FILENAME_RE
         if isinstance(self.ignore_filename_re, basestring):
             self.ignore_filename_re = re.compile(self.ignore_filename_re)
 
