@@ -10,16 +10,21 @@ from contextlib import closing
 from optparse import OptionParser
 
 class Olut(object):
-    IGNORE_FILENAME_RE = re.compile(".*(\.py[co]|\.swp|~)$")
+    DEFAULT_IGNORE_FILENAME_RE = re.compile(".*(\.py[co]|\.swp|~)$")
     DEFAULT_INSTALL_PATH = "/var/olut"
     
-    def __init__(self, install_path=None):
+    def __init__(self, install_path=None, ignore_filename_re=None):
         self.install_path = install_path or self.DEFAULT_INSTALL_PATH
         if not os.path.exists(self.install_path):
             os.makedirs(self.install_path)
+        self.ignore_filename_re = ignore_filename_re or self.DEFAULT_IGNORE_FILENAME_RE
+        if isinstance(self.ignore_filename_re, basestring):
+            self.ignore_filename_re = re.compile(self.ignore_filename_re)
 
     def build_package(self, sourcepath, outpath=".", metapath="olut"):
-        with open(os.path.join(sourcepath, metapath, "metadata.yaml")) as fp:
+        if not metapath.startswith('/'):
+            metapath = os.path.join(sourcepath, metapath)
+        with open(os.path.join(metapath, "metadata.yaml")) as fp:
             meta = yaml.load(fp)
         outname = "%s-%s.tgz" % (meta["name"], meta["version"])
         outpath = os.path.join(outpath, outname)
@@ -29,15 +34,23 @@ class Olut(object):
                     dirs.remove(".git")
                 pkgroot = root[len(sourcepath)+1:]
                 for f in files:
-                    if self.IGNORE_FILENAME_RE.match(f):
+                    if self.ignore_filename_re.match(f):
                         continue
                     realpath = os.path.join(root, f)
                     pkgpath = os.path.join(pkgroot, f)
                     fp.add(realpath, pkgpath)
-    
+            for root, dirs, files in os.walk(metapath):
+                pkgroot = root[len(metapath)+1:]
+                for f in files:
+                    if self.ignore_filename_re.match(f):
+                        continue
+                    realpath = os.path.join(root, f)
+                    pkgpath = os.path.join(".olut", pkgroot, f)
+                    fp.add(realpath, pkgpath)
+
     def install(self, pkgpath):
         with closing(tarfile.open(pkgpath, "r")) as fp:
-            meta = yaml.load(fp.extractfile("olut/metadata.yaml"))
+            meta = yaml.load(fp.extractfile(".olut/metadata.yaml"))
             install_path = os.path.join(
                 self.install_path,
                 meta['name'],
@@ -87,7 +100,7 @@ class Olut(object):
             os.unlink(current_path)
 
     def runscript(self, pkg, ver, script):
-        script_path = os.path.join(self.install_path, pkg, ver, "olut", script)
+        script_path = os.path.join(self.install_path, pkg, ver, ".olut", script)
         if not os.path.exists(script_path):
             return
         subprocess.check_call([script_path])
