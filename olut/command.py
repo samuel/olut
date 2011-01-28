@@ -10,7 +10,7 @@ from contextlib import closing
 from optparse import OptionParser
 
 class Olut(object):
-    IGNORE_FILENAME_RE = re.compile(".*(\.py[co]|\.swp)$")
+    IGNORE_FILENAME_RE = re.compile(".*(\.py[co]|\.swp|~)$")
     DEFAULT_INSTALL_PATH = "/var/olut"
     
     def __init__(self, install_path=None):
@@ -34,7 +34,7 @@ class Olut(object):
                     realpath = os.path.join(root, f)
                     pkgpath = os.path.join(pkgroot, f)
                     fp.add(realpath, pkgpath)
-
+    
     def install(self, pkgpath):
         with closing(tarfile.open(pkgpath, "r")) as fp:
             meta = yaml.load(fp.extractfile("olut/metadata.yaml"))
@@ -52,17 +52,21 @@ class Olut(object):
                     continue
                 fp.extract(name, install_path)
         self.runscript(meta['name'], str(meta['version']), "install")
+    
+    def uninstall(self, pkg, ver):
+        current_ver = self.get_current_version(pkg)
+        if current_ver == ver:
+            raise Exception("Can't uninstall the currently activated version. Must deactivate first.")
+        pkg_path = os.path.join(self.install_path, pkg)
+        if ver == "*":
+            pass # TODO: Delete all versions
+        else:
+            pass # TODO: Delete given version
 
     def list(self):
-        packages = dict((x, {})
-            for x in os.listdir(self.install_path)
-            if not x.startswith('.'))
-        for name in packages:
-            packages[name]["versions"] = [
-                x for x in os.listdir(os.path.join(self.install_path, name))
-                if not x.startswith('.') and x != "current"]
-            packages[name]["current"] = cur = self.get_current_version(name)
-            print name, " ".join(("@"+v) if v == cur else v for v in packages[name]["versions"])
+        packages = self.get_package_list()
+        for name, info in packages.items():
+            print name, " ".join(("@"+v) if v == info["current"] else v for v in info["versions"])
 
     def activate(self, pkg, ver):
         current_path = os.path.join(self.install_path, pkg, "current")
@@ -87,6 +91,17 @@ class Olut(object):
         if not os.path.exists(script_path):
             return
         subprocess.check_call([script_path])
+
+    def get_package_list(self):
+        packages = dict((x, {})
+            for x in os.listdir(self.install_path)
+            if not x.startswith('.'))
+        for name in packages:
+            packages[name]["versions"] = [
+                x for x in os.listdir(os.path.join(self.install_path, name))
+                if not x.startswith('.') and x != "current"]
+            packages[name]["current"] = cur = self.get_current_version(name)
+        return packages
 
     def get_current_version(self, pkg):
         cur = os.path.realpath(
