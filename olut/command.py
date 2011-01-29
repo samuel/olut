@@ -168,7 +168,7 @@ class Olut(object):
             gitmeta["tag"] = tag
             meta["version"] = tag
         else:
-            meta["version"] = datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + "-" + revision[:8]
+            meta["version"] = datetime.datetime.now().strftime("%Y%m%dT%H%M%S") + "-" + revision[:8]
 
         config = self.read_git_config(os.path.join(git_path, "config"))
         url = config.get("remote", {}).get("origin", {}).get("url")
