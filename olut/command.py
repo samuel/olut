@@ -26,7 +26,7 @@ class Olut(object):
         if isinstance(self.ignore_filename_re, basestring):
             self.ignore_filename_re = re.compile(self.ignore_filename_re)
 
-    def build(self, sourcepath, outpath=".", metapath="olut"):
+    def build(self, sourcepath, outpath=".", metapath="olut", metaoverride=None):
         meta = self.get_git_meta(sourcepath)
         if not metapath.startswith('/'):
             metapath = os.path.join(sourcepath, metapath)
@@ -34,6 +34,8 @@ class Olut(object):
         if os.path.exists(metafile_path):
             with open(metafile_path) as fp:
                 meta.update(yaml.load(fp))
+        if metaoverride:
+            meta.update(metaoverride)
         outname = "%s-%s.tgz" % (meta["name"], meta["version"])
         outpath = os.path.join(outpath, outname)
         with closing(tarfile.open(outpath, "w:gz")) as fp:
@@ -228,6 +230,7 @@ class Olut(object):
 
 def build_parser():
     parser = OptionParser(usage="Usage: %prog [options] <command> [arg1] [arg2]")
+    parser.add_option("-m", "--meta", dest="meta", help="Additional meta data (name=value)", action="append")
     parser.add_option("-p", "--path", dest="path", help="Install path")
     parser.add_option("-v", "--verbose", dest="verbose", default=False, help="Verbose output", action="store_true")
     return parser
@@ -246,7 +249,12 @@ def main():
     olut = Olut(
         install_path = options.path,
     )
-    getattr(olut, command)(*args)
+    kwargs = {}
+    if command == "build" and options.meta:
+        kwargs["metaoverride"] = dict(
+            x.split('=') for x in options.meta,
+        )
+    getattr(olut, command)(*args, **kwargs)
 
 if __name__ == "__main__":
     main()
