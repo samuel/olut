@@ -21,7 +21,7 @@ class Olut(object):
         if isinstance(self.ignore_filename_re, basestring):
             self.ignore_filename_re = re.compile(self.ignore_filename_re)
 
-    def build_package(self, sourcepath, outpath=".", metapath="olut"):
+    def build(self, sourcepath, outpath=".", metapath="olut"):
         if not metapath.startswith('/'):
             metapath = os.path.join(sourcepath, metapath)
         with open(os.path.join(metapath, "metadata.yaml")) as fp:
