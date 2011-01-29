@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import logging
 import os
 import re
 import subprocess
@@ -14,6 +15,7 @@ class Olut(object):
     DEFAULT_INSTALL_PATH = "/var/olut"
     
     def __init__(self, install_path=None, ignore_filename_re=None):
+        self.log = logging.getLogger("olut")
         self.install_path = install_path or os.getenv("OLUT_INSTALL_PATH") or self.DEFAULT_INSTALL_PATH
         if not os.path.exists(self.install_path):
             os.makedirs(self.install_path)
@@ -109,8 +111,15 @@ class Olut(object):
             PKG_VERSION = ver,
             PKG_PATH = os.path.join(self.install_path, pkg),
             PKG_VERSION_PATH = version_path,
+            PATH = os.environ["PATH"],
         )
-        subprocess.check_call([script_path], env=env)
+        proc = subprocess.Popen([script_path], env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        out = proc.communicate()[0]
+        if proc.returncode != 0:
+            self.log.error(out)
+            raise Exception("Script %s return a non-zero return code %d" % (script, proc.returncode))
+        else:
+            self.log.info(out)
 
     def get_package_list(self):
         packages = dict((x, {})
@@ -132,6 +141,7 @@ class Olut(object):
 def build_parser():
     parser = OptionParser(usage="Usage: %prog [options] <command> [arg1] [arg2]")
     parser.add_option("-p", "--path", dest="path", help="Install path")
+    parser.add_option("-v", "--verbose", dest="verbose", default=False, help="Verbose output", action="store_true")
     return parser
 
 def main():
@@ -141,6 +151,10 @@ def main():
         command = args.pop(0)
     except IndexError:
         parser.error("must specify a command")
+    if options.verbose:
+        logging.basicConfig(level=logging.INFO)
+    else:
+        logging.basicConfig(level=logging.WARNING)
     olut = Olut(
         install_path = options.path,
     )
