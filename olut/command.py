@@ -100,10 +100,17 @@ class Olut(object):
             os.unlink(current_path)
 
     def runscript(self, pkg, ver, script):
-        script_path = os.path.join(self.install_path, pkg, ver, ".olut", script)
+        version_path = os.path.join(self.install_path, pkg, ver)
+        script_path = os.path.join(version_path, ".olut", script)
         if not os.path.exists(script_path):
             return
-        subprocess.check_call([script_path])
+        env = dict(
+            PKG_NAME = pkg,
+            PKG_VERSION = ver,
+            PKG_PATH = os.path.join(self.install_path, pkg),
+            PKG_VERSION_PATH = version_path,
+        )
+        subprocess.check_call([script_path], env=env)
 
     def get_package_list(self):
         packages = dict((x, {})
