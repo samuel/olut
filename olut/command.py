@@ -1,14 +1,17 @@
 #!/usr/bin/env python
 
+import datetime
 import logging
 import os
 import re
 import subprocess
 import sys
 import tarfile
+import time
 import yaml
 from contextlib import closing
 from optparse import OptionParser
+from StringIO import StringIO
 
 class Olut(object):
     DEFAULT_IGNORE_FILENAME_RE = re.compile(".*(\.py[co]|\.swp|~)$")
@@ -24,10 +27,13 @@ class Olut(object):
             self.ignore_filename_re = re.compile(self.ignore_filename_re)
 
     def build(self, sourcepath, outpath=".", metapath="olut"):
+        meta = self.get_git_meta(sourcepath)
         if not metapath.startswith('/'):
             metapath = os.path.join(sourcepath, metapath)
-        with open(os.path.join(metapath, "metadata.yaml")) as fp:
-            meta = yaml.load(fp)
+        metafile_path = os.path.join(metapath, "metadata.yaml")
+        if os.path.exists(metafile_path):
+            with open(metafile_path) as fp:
+                meta.update(yaml.load(fp))
         outname = "%s-%s.tgz" % (meta["name"], meta["version"])
         outpath = os.path.join(outpath, outname)
         with closing(tarfile.open(outpath, "w:gz")) as fp:
@@ -46,9 +52,19 @@ class Olut(object):
                 for f in files:
                     if self.ignore_filename_re.match(f):
                         continue
+                    if f == "metadata.yaml":
+                        continue
                     realpath = os.path.join(root, f)
                     pkgpath = os.path.join(".olut", pkgroot, f)
                     fp.add(realpath, pkgpath)
+            meta_yaml = yaml.dump(meta, default_flow_style=False)
+            eti = fp.gettarinfo(sourcepath)
+            ti = tarfile.TarInfo(".olut/metadata.yaml")
+            ti.size = len(meta_yaml)
+            ti.mtime = time.time()
+            for k in ("uid", "gid", "uname", "gname"):
+                setattr(ti, k, getattr(eti, k))
+            fp.addfile(ti, StringIO(meta_yaml))
 
     def install(self, pkgpath):
         with closing(tarfile.open(pkgpath, "r")) as fp:
@@ -120,6 +136,78 @@ class Olut(object):
             raise Exception("Script %s return a non-zero return code %d" % (script, proc.returncode))
         else:
             self.log.info(out)
+    
+    def get_git_meta(self, path):
+        git_path = os.path.join(path, ".git")
+        if not os.path.exists(git_path):
+            return {}
+        gitmeta = {}
+        meta = {"git": gitmeta}
+        with open(os.path.join(git_path, "HEAD"), "rb") as fp:
+            ref = fp.read().strip().split(" ")[-1]
+            gitmeta["branch"] = ref.split('/')[-1]
+        
+        try:
+            with open(os.path.join(git_path, ref), "r") as fp:
+                revision = fp.read().strip()
+        except IOError:
+            # ref has probably been packed
+            with open(os.path.join(git_path, "packed-refs"), "r") as fp:
+                refs = fp.read().strip().split("\n")
+            for r in refs:
+                r = r.strip().split(' ')
+                if r[-1] == ref:
+                    revision = r[0]
+                    break
+        gitmeta["revision"] = revision
+
+        tag = self.find_git_revision_tag(git_path, revision)
+        if tag:
+            gitmeta["tag"] = tag
+            meta["version"] = tag
+        else:
+            meta["version"] = datetime.datetime.now().strftime("%Y%m%d-%H%M%S") + "-" + revision[:8]
+
+        config = self.read_git_config(os.path.join(git_path, "config"))
+        url = config.get("remote", {}).get("origin", {}).get("url")
+        if url:
+            gitmeta["url"] = url
+            if url.endswith(".git"):
+                meta["name"] = url.rsplit('/', 1)[-1].rsplit('.', 1)[0]
+
+        return meta
+    
+    def find_git_revision_tag(self, path, revision):
+        for tag in os.listdir(os.path.join(path, "refs/tags")):
+            if tag.startswith('.'):
+                continue
+            with open(os.path.join(path, "refs/tags", tag), "r") as fp:
+                rev = fp.read().strip()
+            if rev == revision:
+                return tag
+    
+    def read_git_config(self, path):
+        config = {}
+        section = None
+        with open(path, "rb") as fp:
+            for line in fp:
+                line = line.strip()
+                if line.startswith('['):
+                    name = line[1:-1]
+                    if " " in name:
+                        name, sname = name.split(' ', 1)
+                        sname = sname[1:-1]
+                    else:
+                        sname = None
+                    section = config.setdefault(name, {})
+                    if sname:
+                        section = section.setdefault(sname, {})
+                else:
+                    key, value = line.split('=')
+                    key = key.strip()
+                    value = value.strip()
+                    section[key] = value
+        return config
 
     def get_package_list(self):
         packages = dict((x, {})
