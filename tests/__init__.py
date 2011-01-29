@@ -16,8 +16,8 @@ class BasicTests(unittest.TestCase):
         self.cleanTempPath()
         self.olut = Olut(TEMP_PATH)
 
-#    def tearDown(self):
-#        self.cleanTempPath()
+    def tearDown(self):
+        self.cleanTempPath()
     
     def testBuild(self):
         self.olut.build(os.path.join(TEST_PATH, "testapp"), TEMP_PATH)
