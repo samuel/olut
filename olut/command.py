@@ -103,10 +103,24 @@ class Olut(object):
             pass # TODO: Delete given version
 
     def list(self):
-        packages = self.get_package_list()
+        packages = self.get_installed_list()
         for name, info in packages.items():
-            print name, " ".join(("@"+v) if v == info["current"] else v for v in info["versions"])
-
+            print name
+            for version, meta in info["versions"]:
+                scm = meta.get('scm', {})
+                print "    {is_current} {version} branch:{branch} revision:{revision} tag:{tag}".format(
+                    is_current = "@" if version == info["current"] else " ",
+                    version = version,
+                    branch = scm.get('branch', ''),
+                    revision = scm.get('revision', '')[:8],
+                    tag = scm.get('tag', ''),
+                )
+    
+    def info(self, pkg):
+        info = self.get_package_info(pkg)
+        import pprint
+        pprint.pprint(info)
+    
     def activate(self, pkg, ver):
         current_path = os.path.join(self.install_path, pkg, "current")
         pkg_path = os.path.join(self.install_path, pkg, ver)
@@ -149,8 +163,8 @@ class Olut(object):
         git_path = os.path.join(path, ".git")
         if not os.path.exists(git_path):
             return {}
-        gitmeta = {}
-        meta = {"git": gitmeta}
+        gitmeta = {"type": "git"}
+        meta = {"scm": gitmeta}
         with open(os.path.join(git_path, "HEAD"), "rb") as fp:
             ref = fp.read().strip().split(" ")[-1]
             gitmeta["branch"] = ref.split('/')[-1]
@@ -216,18 +230,32 @@ class Olut(object):
                     value = value.strip()
                     section[key] = value
         return config
+    
+    def get_package_info(self, path):
+        with closing(tarfile.open(path, "r:gz")) as fp:
+            meta = yaml.load(fp.extractfile(".olut/metadata.yaml"))
+        return meta
 
-    def get_package_list(self):
+    def get_installed_list(self):
         packages = dict((x, {})
             for x in os.listdir(self.install_path)
-            if not x.startswith('.'))
+            if not x.startswith('.')
+               and os.path.isdir(os.path.join(self.install_path, x)))
         for name in packages:
-            packages[name]["versions"] = [
-                x for x in os.listdir(os.path.join(self.install_path, name))
-                if not x.startswith('.') and x != "current"]
-            packages[name]["current"] = cur = self.get_current_version(name)
+            packages[name]["versions"] = versions = []
+            for ver in os.listdir(os.path.join(self.install_path, name)):
+                ver_path = os.path.join(self.install_path, name, ver)
+                if (ver.startswith('.')
+                        or os.path.islink(ver_path)
+                        or not os.path.exists(os.path.join(ver_path, ".olut"))):
+                    continue
+                with open(os.path.join(ver_path, ".olut", "metadata.yaml"), "r") as fp:
+                    meta = yaml.load(fp)
+                versions.append((ver, meta))
+            versions.sort(key=lambda x:x[1]["install_date"], reverse=True)
+            packages[name]["current"] = self.get_current_version(name)
         return packages
-
+    
     def get_current_version(self, pkg):
         cur = os.path.realpath(
               os.path.join(self.install_path, pkg, "current")).rsplit('/')[-1]
