@@ -27,6 +27,8 @@ class Olut(object):
             self.ignore_filename_re = re.compile(self.ignore_filename_re)
 
     def build(self, sourcepath, outpath=".", metapath="olut", metaoverride=None):
+        if not os.path.exists(sourcepath):
+            raise IOError("Source path does not exist")
         meta = self.get_git_meta(sourcepath)
         if not metapath.startswith('/'):
             metapath = os.path.join(sourcepath, metapath)
@@ -59,6 +61,7 @@ class Olut(object):
                     realpath = os.path.join(root, f)
                     pkgpath = os.path.join(".olut", pkgroot, f)
                     fp.add(realpath, pkgpath)
+            meta["build_date"] = datetime.datetime.now()
             meta_yaml = yaml.dump(meta, default_flow_style=False)
             eti = fp.gettarinfo(sourcepath)
             ti = tarfile.TarInfo(".olut/metadata.yaml")
@@ -71,6 +74,7 @@ class Olut(object):
     def install(self, pkgpath):
         with closing(tarfile.open(pkgpath, "r")) as fp:
             meta = yaml.load(fp.extractfile(".olut/metadata.yaml"))
+            meta["install_date"] = datetime.datetime.now()
             install_path = os.path.join(
                 self.install_path,
                 meta['name'],
@@ -84,6 +88,8 @@ class Olut(object):
                     print "Ignoring invalid file", name
                     continue
                 fp.extract(name, install_path)
+        with open(os.path.join(install_path, ".olut/metadata.yaml"), "w") as fp:
+            yaml.dump(meta, fp, default_flow_style=False)
         self.runscript(meta['name'], str(meta['version']), "install")
     
     def uninstall(self, pkg, ver):
