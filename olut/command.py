@@ -151,8 +151,7 @@ class Olut(object):
     
     def info(self, pkg):
         info = self.get_package_info(pkg)
-        import pprint
-        pprint.pprint(info)
+        yaml.dump(info, sys.stdout, default_flow_style=False)
     
     def activate(self, pkg, ver):
         current_path = os.path.join(self.install_path, pkg, "current")
