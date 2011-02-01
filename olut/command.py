@@ -20,13 +20,14 @@ class Olut(object):
     def __init__(self, install_path=None, ignore_filename_re=None):
         self.log = logging.getLogger("olut")
         self.install_path = install_path or os.getenv("OLUT_INSTALL_PATH") or self.DEFAULT_INSTALL_PATH
-        if not os.path.exists(self.install_path):
-            os.makedirs(self.install_path)
         self.ignore_filename_re = ignore_filename_re or os.getenv("OLUT_IGNORE_FILENAME_RE") or self.DEFAULT_IGNORE_FILENAME_RE
         if isinstance(self.ignore_filename_re, basestring):
             self.ignore_filename_re = re.compile(self.ignore_filename_re)
 
     def build(self, sourcepath, outpath=".", metapath="olut", metaoverride=None):
+        if not os.path.exists(outpath):
+            os.makedirs(outpath)
+        sourcepath = sourcepath.rstrip('/')
         if not os.path.exists(sourcepath):
             raise IOError("Source path does not exist")
         meta = self.get_git_meta(sourcepath)
@@ -72,6 +73,8 @@ class Olut(object):
             fp.addfile(ti, StringIO(meta_yaml))
 
     def install(self, pkgpath):
+        if not os.path.exists(self.install_path):
+            os.makedirs(self.install_path)
         with closing(tarfile.open(pkgpath, "r")) as fp:
             meta = yaml.load(fp.extractfile(".olut/metadata.yaml"))
             meta["install_date"] = datetime.datetime.now()
@@ -182,21 +185,20 @@ class Olut(object):
                     revision = r[0]
                     break
         gitmeta["revision"] = revision
-
+        
         tag = self.find_git_revision_tag(git_path, revision)
         if tag:
             gitmeta["tag"] = tag
             meta["version"] = tag
         else:
             meta["version"] = datetime.datetime.now().strftime("%Y%m%dT%H%M%S") + "-" + revision[:8]
-
+        
         config = self.read_git_config(os.path.join(git_path, "config"))
         url = config.get("remote", {}).get("origin", {}).get("url")
         if url:
             gitmeta["url"] = url
-            if url.endswith(".git"):
-                meta["name"] = url.rsplit('/', 1)[-1].rsplit('.', 1)[0]
-
+            meta["name"] = url.rsplit('/', 1)[-1].rsplit('.', 1)[0]
+        
         return meta
     
     def find_git_revision_tag(self, path, revision):
