@@ -47,7 +47,7 @@ class Olut(object):
         meta["build_date"] = datetime.datetime.now()
         
         # Build package tar.gz
-        ignored_files = set(meta.pop('ignored_files', []))
+        ignored_files = meta.pop('ignored_files', [])
         outname = "%s-%s.tgz" % (meta["name"], meta["version"])
         outpath = os.path.join(outpath, outname)
         with closing(tarfile.open(outpath, "w:gz")) as fp:
@@ -58,7 +58,11 @@ class Olut(object):
                 for d in list(dirs):
                     if d in ignored_files or (d+"/") in ignored_files:
                         dirs.remove(d)
-                
+
+                pkgroot = root[len(sourcepath)+1:]
+                #if pkgroot in ignored_files or (pkgroot+"/") in ignored_files:
+                #    continue
+
                 for f in files:
                     realpath = os.path.join(root, f)
                     pkgpath = os.path.join(pkgroot, f)
@@ -67,6 +71,7 @@ class Olut(object):
                     if pkgpath in ignored_files:
                         continue
                     
+                    self.log.info(pkgpath)
                     fp.add(realpath, pkgpath)
             
             # Include files from the metadata/scripts path
