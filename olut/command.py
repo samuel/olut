@@ -36,7 +36,9 @@ class Olut(object):
         metafile_path = os.path.join(metapath, "metadata.yaml")
         if os.path.exists(metafile_path):
             with open(metafile_path) as fp:
-                meta.update(yaml.load(fp))
+                projmeta = yaml.load(fp)
+                if projmeta:
+                    meta.update(progmeta)
         if metaoverride:
             meta.update(metaoverride)
         ignored_files = meta.pop('ignored_files', [])
