@@ -156,7 +156,8 @@ class Olut(object):
         current_path = os.path.join(self.install_path, pkg, "current")
         pkg_path = os.path.join(self.install_path, pkg, ver)
         if os.path.exists(current_path):
-            raise Exception("Must deactivate current version first")
+            self.log.info("Deactivating current version of %s" % pkg)
+            self.deactivate(pkg)
         os.symlink(pkg_path, current_path)
         self.runscript(pkg, ver, "activate") 
 
