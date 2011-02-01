@@ -47,7 +47,7 @@ class Olut(object):
         meta["build_date"] = datetime.datetime.now()
         
         # Build package tar.gz
-        ignored_files = meta.pop('ignored_files', [])
+        ignored_files = set(meta.pop('ignored_files', []))
         outname = "%s-%s.tgz" % (meta["name"], meta["version"])
         outpath = os.path.join(outpath, outname)
         with closing(tarfile.open(outpath, "w:gz")) as fp:
