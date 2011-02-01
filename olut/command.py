@@ -268,7 +268,7 @@ class Olut(object):
         return cur if cur != "current" else None
 
 
-def render_template(source, dest, pkg_ver_path=None):
+def render_template(source, dest=None, pkg_ver_path=None):
     pkg_ver_path = pkg_ver_path or os.getenv("PKG_VERSION_PATH")
     if not pkg_ver_path or not os.path.exists(pkg_ver_path):
         sys.stderr.write("Must either pass in package version path or PKG_VERSION_PATH environment should be set\n")
@@ -277,6 +277,11 @@ def render_template(source, dest, pkg_ver_path=None):
         source = os.path.join(pkg_ver_path, source)
     with open(os.path.join(pkg_ver_path, ".olut", "metadata.yaml"), "r") as fp:
         meta = yaml.load(fp)
+    if not dest:
+        if not source.endswith('.tmpl'):
+            sys.stderr.write("When rendering a template either a destination must be provided or the source should end in '.tmpl'\n")
+            sys.exit(1)
+        dest = source.rsplit('.', 1)[0]
     if not dest.startswith('/'):
         dest = os.path.join(pkg_ver_path, dest)
     with open(source, "rb") as fp:
