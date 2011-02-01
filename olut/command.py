@@ -71,6 +71,7 @@ class Olut(object):
             for k in ("uid", "gid", "uname", "gname"):
                 setattr(ti, k, getattr(eti, k))
             fp.addfile(ti, StringIO(meta_yaml))
+        return outpath
 
     def install(self, pkgpath):
         if not os.path.exists(self.install_path):
