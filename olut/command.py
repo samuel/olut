@@ -98,11 +98,13 @@ class Olut(object):
             fp.addfile(ti, StringIO(meta_yaml))
         return outpath
 
-    def install(self, pkgpath):
+    def install(self, pkgpath, metaoverride=None):
         if not os.path.exists(self.install_path):
             os.makedirs(self.install_path)
         with closing(tarfile.open(pkgpath, "r")) as fp:
             meta = yaml.load(fp.extractfile(".olut/metadata.yaml"))
+            if metaoverride:
+                meta.update(metaoverride)
             meta["install_date"] = datetime.datetime.now()
             install_path = os.path.join(
                 self.install_path,
