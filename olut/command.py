@@ -304,7 +304,7 @@ class Olut(object):
         return cur if cur != "current" else None
 
 
-def render_template(source, dest=None, pkg_ver_path=None):
+def render_template(source, dest=None, pkg_ver_path=None, metaoverride=None):
     pkg_ver_path = pkg_ver_path or os.getenv("PKG_VERSION_PATH")
     if not pkg_ver_path or not os.path.exists(pkg_ver_path):
         sys.stderr.write("Must either pass in package version path or PKG_VERSION_PATH environment should be set\n")
@@ -313,6 +313,13 @@ def render_template(source, dest=None, pkg_ver_path=None):
         source = os.path.join(pkg_ver_path, source)
     with open(os.path.join(pkg_ver_path, ".olut", "metadata.yaml"), "r") as fp:
         meta = yaml.load(fp)
+    if metaoverride:
+        meta.update(metaoverride)
+    meta.update(
+        version_path = pkg_ver_path,
+        env = os.environ,
+    )
+
     if not dest:
         if not source.endswith('.tmpl'):
             sys.stderr.write("When rendering a template either a destination must be provided or the source should end in '.tmpl'\n")
@@ -321,7 +328,6 @@ def render_template(source, dest=None, pkg_ver_path=None):
     if not dest.startswith('/'):
         dest = os.path.join(pkg_ver_path, dest)
     with open(source, "rb") as fp:
-        meta["version_path"] = pkg_ver_path
         text = fp.read().format(**meta)
     with open(dest, "wb") as fp:
         fp.write(text)
@@ -350,13 +356,13 @@ def main():
         install_path = options.path,
     )
     kwargs = {}
-    if command == "render":
-        render_template(*args)
-        sys.exit(0)
-    if command == "build" and options.meta:
+    if options.meta:
         kwargs["metaoverride"] = dict(
             x.split('=') for x in options.meta,
         )
+    if command == "render":
+        render_template(*args, **kwargs)
+        sys.exit(0)
     getattr(olut, command)(*args, **kwargs)
 
 if __name__ == "__main__":
