@@ -27,9 +27,12 @@ class Olut(object):
     def build(self, sourcepath, outpath=".", metapath="olut", metaoverride=None):
         if not os.path.exists(outpath):
             os.makedirs(outpath)
+        
         sourcepath = sourcepath.rstrip('/')
         if not os.path.exists(sourcepath):
             raise IOError("Source path does not exist")
+        
+        # read & generate meta
         meta = self.get_git_meta(sourcepath)
         if not metapath.startswith('/'):
             metapath = os.path.join(sourcepath, metapath)
@@ -41,27 +44,33 @@ class Olut(object):
                     meta.update(progmeta)
         if metaoverride:
             meta.update(metaoverride)
+        meta["build_date"] = datetime.datetime.now()
+        
+        # Build package tar.gz
         ignored_files = meta.pop('ignored_files', [])
         outname = "%s-%s.tgz" % (meta["name"], meta["version"])
         outpath = os.path.join(outpath, outname)
         with closing(tarfile.open(outpath, "w:gz")) as fp:
             for root, dirs, files in os.walk(sourcepath):
+                # Skip ignored directories
                 if ".git" in dirs:
                     dirs.remove(".git")
                 for d in list(dirs):
                     if d in ignored_files or (d+"/") in ignored_files:
                         dirs.remove(d)
-                pkgroot = root[len(sourcepath)+1:]
-                if pkgroot in ignored_files or (pkgroot+"/") in ignored_files:
-                    continue
+                
                 for f in files:
-                    if self.ignore_filename_re.match(f):
-                        continue
                     realpath = os.path.join(root, f)
                     pkgpath = os.path.join(pkgroot, f)
+                    if self.ignore_filename_re.match(pkgpath):
+                        continue
                     if pkgpath in ignored_files:
                         continue
+                    
                     fp.add(realpath, pkgpath)
+            
+            # Include files from the metadata/scripts path
+            # except metadata.yaml which we deal with separately
             for root, dirs, files in os.walk(metapath):
                 pkgroot = root[len(metapath)+1:]
                 for f in files:
@@ -72,9 +81,10 @@ class Olut(object):
                     realpath = os.path.join(root, f)
                     pkgpath = os.path.join(".olut", pkgroot, f)
                     fp.add(realpath, pkgpath)
-            meta["build_date"] = datetime.datetime.now()
+            
+            # Write out modified metadata
             meta_yaml = yaml.dump(meta, default_flow_style=False)
-            eti = fp.gettarinfo(sourcepath)
+            eti = fp.gettarinfo(sourcepath) # Use an existing file to get uid, gid, etc..
             ti = tarfile.TarInfo(".olut/metadata.yaml")
             ti.size = len(meta_yaml)
             ti.mtime = time.time()
