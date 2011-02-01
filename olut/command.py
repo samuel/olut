@@ -190,9 +190,12 @@ class Olut(object):
         tag = self.find_git_revision_tag(git_path, revision)
         if tag:
             gitmeta["tag"] = tag
-            meta["version"] = tag
+            meta["version"] = "%s-%s" % (gitmeta["branch"], tag)
         else:
-            meta["version"] = datetime.datetime.now().strftime("%Y%m%dT%H%M%S") + "-" + revision[:8]
+            meta["version"] = "%s-%s" % (
+                gitmeta["branch"],
+                datetime.datetime.now().strftime("%Y%m%dT%H%M%S"),
+            )
         
         config = self.read_git_config(os.path.join(git_path, "config"))
         url = config.get("remote", {}).get("origin", {}).get("url")
@@ -265,12 +268,31 @@ class Olut(object):
         return cur if cur != "current" else None
 
 
+def render_template(source, dest, pkg_ver_path=None):
+    pkg_ver_path = pkg_ver_path or os.getenv("PKG_VERSION_PATH")
+    if not pkg_ver_path or not os.path.exists(pkg_ver_path):
+        sys.stderr.write("Must either pass in package version path or PKG_VERSION_PATH environment should be set\n")
+        sys.exit(1)
+    if not source.startswith('/'):
+        source = os.path.join(pkg_ver_path, source)
+    with open(os.path.join(pkg_ver_path, ".olut", "metadata.yaml"), "r") as fp:
+        meta = yaml.load(fp)
+    if not dest.startswith('/'):
+        dest = os.path.join(pkg_ver_path, dest)
+    with open(source, "rb") as fp:
+        meta["version_path"] = pkg_ver_path
+        text = fp.read().format(**meta)
+    with open(dest, "wb") as fp:
+        fp.write(text)
+
+
 def build_parser():
     parser = OptionParser(usage="Usage: %prog [options] <command> [arg1] [arg2]")
     parser.add_option("-m", "--meta", dest="meta", help="Additional meta data (name=value)", action="append")
     parser.add_option("-p", "--path", dest="path", help="Install path")
     parser.add_option("-v", "--verbose", dest="verbose", default=False, help="Verbose output", action="store_true")
     return parser
+
 
 def main():
     parser = build_parser()
@@ -287,6 +309,9 @@ def main():
         install_path = options.path,
     )
     kwargs = {}
+    if command == "render":
+        render_template(*args)
+        sys.exit(0)
     if command == "build" and options.meta:
         kwargs["metaoverride"] = dict(
             x.split('=') for x in options.meta,
