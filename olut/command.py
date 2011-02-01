@@ -15,7 +15,7 @@ from StringIO import StringIO
 
 class Olut(object):
     DEFAULT_IGNORE_FILENAME_RE = re.compile(".*(\.py[co]|\.swp|~)$")
-    DEFAULT_INSTALL_PATH = "/var/olut"
+    DEFAULT_INSTALL_PATH = "/var/lib/olut"
     
     def __init__(self, install_path=None, ignore_filename_re=None):
         self.log = logging.getLogger("olut")
