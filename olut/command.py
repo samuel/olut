@@ -39,18 +39,26 @@ class Olut(object):
                 meta.update(yaml.load(fp))
         if metaoverride:
             meta.update(metaoverride)
+        ignored_files = meta.pop('ignored_files', [])
         outname = "%s-%s.tgz" % (meta["name"], meta["version"])
         outpath = os.path.join(outpath, outname)
         with closing(tarfile.open(outpath, "w:gz")) as fp:
             for root, dirs, files in os.walk(sourcepath):
                 if ".git" in dirs:
                     dirs.remove(".git")
+                for d in list(dirs):
+                    if d in ignored_files or (d+"/") in ignored_files:
+                        dirs.remove(d)
                 pkgroot = root[len(sourcepath)+1:]
+                if pkgroot in ignored_files or (pkgroot+"/") in ignored_files:
+                    continue
                 for f in files:
                     if self.ignore_filename_re.match(f):
                         continue
                     realpath = os.path.join(root, f)
                     pkgpath = os.path.join(pkgroot, f)
+                    if pkgpath in ignored_files:
+                        continue
                     fp.add(realpath, pkgpath)
             for root, dirs, files in os.walk(metapath):
                 pkgroot = root[len(metapath)+1:]
@@ -163,6 +171,15 @@ class Olut(object):
         else:
             self.log.info(out)
     
+    def get_git_ignored(self, path):
+        p = subprocess.Popen("cd %s; git status --porcelain --ignored" % path, shell=True, stdout=subprocess.PIPE)
+        out = p.communicate()[0]
+        return [
+            x.split(' ', 1)[1]
+            for x in out.split("\n")
+            if x.split(' ', 1)[0] == "!!"
+        ]
+
     def get_git_meta(self, path):
         git_path = os.path.join(path, ".git")
         if not os.path.exists(git_path):
@@ -196,13 +213,15 @@ class Olut(object):
                 gitmeta["branch"],
                 datetime.datetime.now().strftime("%Y%m%dT%H%M%S"),
             )
-        
+         
         config = self.read_git_config(os.path.join(git_path, "config"))
         url = config.get("remote", {}).get("origin", {}).get("url")
         if url:
             gitmeta["url"] = url
             meta["name"] = url.rsplit('/', 1)[-1].rsplit('.', 1)[0]
         
+        meta["ignored_files"] = self.get_git_ignored(path)
+
         return meta
     
     def find_git_revision_tag(self, path, revision):
