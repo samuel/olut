@@ -98,7 +98,7 @@ class Olut(object):
             fp.addfile(ti, StringIO(meta_yaml))
         return outpath
 
-    def install(self, pkgpath, metaoverride=None):
+    def install(self, pkgpath, activate=False, metaoverride=None):
         if not os.path.exists(self.install_path):
             os.makedirs(self.install_path)
         with closing(tarfile.open(pkgpath, "r")) as fp:
@@ -122,6 +122,8 @@ class Olut(object):
         with open(os.path.join(install_path, ".olut/metadata.yaml"), "w") as fp:
             yaml.dump(meta, fp, default_flow_style=False)
         self.runscript(meta['name'], str(meta['version']), "install")
+        if activate:
+            self.activate(meta["name"], meta["version"])
     
     def uninstall(self, pkg, ver):
         current_ver = self.get_current_version(pkg)
@@ -338,6 +340,7 @@ def render_template(source, dest=None, pkg_ver_path=None, metaoverride=None):
 
 def build_parser():
     parser = OptionParser(usage="Usage: %prog [options] <command> [arg1] [arg2]")
+    parser.add_option("-a", "--activate", dest="activate", help="Activate version on install (off by default)", default=False, action="store_true")
     parser.add_option("-m", "--meta", dest="meta", help="Additional meta data (name=value)", action="append")
     parser.add_option("-p", "--path", dest="path", help="Install path")
     parser.add_option("-v", "--verbose", dest="verbose", default=False, help="Verbose output", action="store_true")
@@ -363,6 +366,8 @@ def main():
         kwargs["metaoverride"] = dict(
             x.split('=') for x in options.meta,
         )
+    if options.activate:
+        kwargs["activate"] = True
     if command == "render":
         render_template(*args, **kwargs)
         sys.exit(0)
