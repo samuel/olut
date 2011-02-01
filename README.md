@@ -11,3 +11,19 @@ Commands
 * **activate** *name* *version* - activate a specific version
 * **deactivate** *name* - deactivate the current version
 
+Package Scripts
+---------------
+
+Scripts receive the following environment variables:
+
+* PKG_NAME
+* PKG_VERSION
+* PKG_PATH
+* PKG_VERSION_PATH
+
+Scripts run at various times:
+
+* install
+* activate
+* deactivate
+
