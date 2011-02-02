@@ -4,6 +4,7 @@ import datetime
 import logging
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -133,7 +134,9 @@ class Olut(object):
         if ver == "*":
             pass # TODO: Delete all versions
         else:
-            pass # TODO: Delete given version
+            ver_path = os.path.join(pkg_path, ver)
+            if os.path.exists(ver_path):
+                shutil.rmtree(ver_path)
 
     def list(self):
         packages = self.get_installed_list()
@@ -156,7 +159,9 @@ class Olut(object):
     def activate(self, pkg, ver):
         current_path = os.path.join(self.install_path, pkg, "current")
         pkg_path = os.path.join(self.install_path, pkg, ver)
-        if os.path.exists(current_path):
+        if not os.path.exists(pkg_path):
+            raise Exception("Version %s for package %s is not installed" % (ver, pkg))
+        if os.path.lexists(current_path):
             self.log.info("Deactivating current version of %s" % pkg)
             self.deactivate(pkg)
         os.symlink(pkg_path, current_path)
@@ -164,6 +169,10 @@ class Olut(object):
 
     def deactivate(self, pkg):
         current_path = os.path.join(self.install_path, pkg, "current")
+        if not os.path.exists(current_path):
+            if os.path.lexists(current_path):
+                os.unlink(current_path)
+            return
         current_ver = self.get_current_version(pkg) 
         if not current_ver:
             print "No current version"

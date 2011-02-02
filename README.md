@@ -27,3 +27,14 @@ Scripts run at various times:
 * activate
 * deactivate
 
+Version Matching
+----------------
+
+* * - all
+* ~[re] - regex search
+* HEAD - most recent
+* HEAD- - one before the most recent
+* CUR - current version
+* CUR- - one before current
+* CUR++ - two after current
+
