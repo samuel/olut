@@ -226,9 +226,9 @@ class Olut(object):
             
             ver_spec = ver_spec[1:]
             if len(ver_spec) == 1 or ver_spec[1] in ('-', '+'): # --- / +++
-                offset = int(ver_spec[0]+(ver_spec[1:] or '1'))
+                offset = -int(ver_spec[0]+(ver_spec[1:] or '1'))
             else: # -2 / +5
-                offset = int(ver_spec)
+                offset = -int(ver_spec)
             
             current_i = [x[0] for x in versions].index(current_version)
             return [versions[max(0, current_i+offset)][0]]
