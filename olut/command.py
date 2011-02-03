@@ -186,6 +186,8 @@ class Olut(object):
         script_path = os.path.join(version_path, ".olut", script)
         if not os.path.exists(script_path):
             return
+        with open(os.path.join(version_path, ".olut", "metadata.yaml"), "r") as fp:
+            meta = yaml.load(fp)
         env = dict(
             PKG_NAME = pkg,
             PKG_VERSION = ver,
@@ -193,6 +195,9 @@ class Olut(object):
             PKG_VERSION_PATH = version_path,
             PATH = os.environ["PATH"],
         )
+        for k, v in meta.items():
+            if isinstance(v, (int, long, basestring)):
+                env["META_%s" % k.upper()] = str(v)
         proc = subprocess.Popen([script_path], env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         out = proc.communicate()[0]
         if proc.returncode != 0:
