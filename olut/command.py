@@ -157,10 +157,19 @@ class Olut(object):
         yaml.dump(info, sys.stdout, default_flow_style=False)
     
     def activate(self, pkg, ver):
+        versions = self.find_versions(pkg, ver)
+        if not versions:
+            raise Exception("Could not find version matching %s for package %s" % (ver, pkg))
+        #if len(versions) > 1:
+        #    raise Exception("More than one version matched %s for package %s: %s" % (ver, pkg, ", ".join(versions)))
+        ver = versions[0]
+        cur_ver = self.get_current_version(pkg)
+        if ver == cur_ver:
+            self.log.info("Trying to activate a version that's already the current")
+            return
+
         current_path = os.path.join(self.install_path, pkg, "current")
         pkg_path = os.path.join(self.install_path, pkg, ver)
-        if not os.path.exists(pkg_path):
-            raise Exception("Version %s for package %s is not installed" % (ver, pkg))
         if os.path.lexists(current_path):
             self.log.info("Deactivating current version of %s" % pkg)
             self.deactivate(pkg)
@@ -205,6 +214,31 @@ class Olut(object):
             raise Exception("Script %s return a non-zero return code %d" % (script, proc.returncode))
         else:
             self.log.info(out)
+    
+    def find_versions(self, pkg, ver_spec):
+        if os.path.exists(os.path.join(self.install_path, pkg, ver_spec)):
+            return [ver_spec]
+        versions = self.get_versions(pkg)
+        if ver_spec[0] == '@':
+            current_version = self.get_current_version(pkg)
+            if not current_version:
+                raise Exception("Trying to find version '%s' when no current version active for %s", ver_spec, pkg)
+            
+            ver_spec = ver_spec[1:]
+            if len(ver_spec) == 1 or ver_spec[1] in ('-', '+'): # --- / +++
+                offset = int(ver_spec[0]+(ver_spec[1:] or '1'))
+            else: # -2 / +5
+                offset = int(ver_spec)
+            
+            current_i = [x[0] for x in versions].index(current_version)
+            return [versions[max(0, current_i+offset)][0]]
+
+        try:
+            ver_i = int(ver_spec)
+        except ValueError:
+            pass
+        else:
+            return [versions[ver_i][0]]
     
     def get_git_ignored(self, path):
         p = subprocess.Popen("cd %s; git status --porcelain --ignored" % path, shell=True, stdout=subprocess.PIPE)
@@ -302,20 +336,24 @@ class Olut(object):
             if not x.startswith('.')
                and os.path.isdir(os.path.join(self.install_path, x)))
         for name in packages:
-            packages[name]["versions"] = versions = []
-            for ver in os.listdir(os.path.join(self.install_path, name)):
-                ver_path = os.path.join(self.install_path, name, ver)
-                if (ver.startswith('.')
-                        or os.path.islink(ver_path)
-                        or not os.path.exists(os.path.join(ver_path, ".olut"))):
-                    continue
-                with open(os.path.join(ver_path, ".olut", "metadata.yaml"), "r") as fp:
-                    meta = yaml.load(fp)
-                versions.append((ver, meta))
-            versions.sort(key=lambda x:x[1]["install_date"], reverse=True)
+            packages[name]["versions"] = self.get_versions(name)
             packages[name]["current"] = self.get_current_version(name)
         return packages
     
+    def get_versions(self, pkg):
+        versions = []
+        for ver in os.listdir(os.path.join(self.install_path, pkg)):
+            ver_path = os.path.join(self.install_path, pkg, ver)
+            if (ver.startswith('.')
+                    or os.path.islink(ver_path)
+                    or not os.path.exists(os.path.join(ver_path, ".olut"))):
+                continue
+            with open(os.path.join(ver_path, ".olut", "metadata.yaml"), "r") as fp:
+                meta = yaml.load(fp)
+            versions.append((ver, meta))
+        versions.sort(key=lambda x:x[1]["install_date"], reverse=True)
+        return versions
+
     def get_current_version(self, pkg):
         cur = os.path.realpath(
               os.path.join(self.install_path, pkg, "current")).rsplit('/')[-1]

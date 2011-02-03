@@ -32,9 +32,8 @@ Version Matching
 
 * * - all
 * ~[re] - regex search
-* HEAD - most recent
-* HEAD- - one before the most recent
-* CUR - current version
-* CUR- - one before current
-* CUR++ - two after current
+* 0 - most recent
+* 1 - one before the most recent
+* @- / @-1 - one before current
+* @++ / @+2 - two after current
 
