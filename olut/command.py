@@ -106,6 +106,7 @@ class Olut(object):
             meta = yaml.load(fp.extractfile(".olut/metadata.yaml"))
             if metaoverride:
                 meta.update(metaoverride)
+            self.log.info("Installing version %s of %s", meta["version"], meta["name"])
             meta["install_date"] = datetime.datetime.now()
             install_path = os.path.join(
                 self.install_path,
