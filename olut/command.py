@@ -185,7 +185,7 @@ class Olut(object):
         if not current_ver:
             self.log.info("No current version")
             return
-        self.log.info("Deactivating current version %s of %s" % (current_version, pkg))
+        self.log.info("Deactivating current version %s of %s", (current_ver, pkg))
         self.runscript(pkg, current_ver, "deactivate")
         if os.path.exists(current_path):
             os.unlink(current_path)
