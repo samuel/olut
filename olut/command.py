@@ -210,6 +210,8 @@ class Olut(object):
             PKG_VERSION = ver,
             PKG_PATH = os.path.join(self.install_path, pkg),
             PKG_VERSION_PATH = version_path,
+            USER = os.environ["USER"],
+            HOME = os.environ["HOME"],
             PATH = os.environ["PATH"],
         )
         for k, v in meta.items():
