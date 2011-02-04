@@ -394,7 +394,7 @@ def build_parser():
     parser.add_option("-a", "--activate", dest="activate", help="Activate version on install (off by default)", default=False, action="store_true")
     parser.add_option("-m", "--meta", dest="meta", help="Additional meta data (name=value)", action="append")
     parser.add_option("-p", "--path", dest="path", help="Install path")
-    parser.add_option("-q", "--quoet", dest="quiet" help="Quiet output", default=False, action="store_true")
+    parser.add_option("-q", "--quiet", dest="quiet", help="Quiet output", default=False, action="store_true")
     parser.add_option("-v", "--verbose", dest="verbose", help="Verbose output", default=False, action="store_true")
     return parser
 
