@@ -156,7 +156,7 @@ class Olut(object):
         info = self.get_package_info(pkg)
         yaml.dump(info, sys.stdout, default_flow_style=False)
     
-    def activate(self, pkg, ver):
+    def activate(self, pkg, ver, revert=True):
         versions = self.find_versions(pkg, ver)
         if not versions:
             raise Exception("Could not find version matching %s for package %s" % (ver, pkg))
@@ -172,8 +172,15 @@ class Olut(object):
         pkg_path = os.path.join(self.install_path, pkg, ver)
         if os.path.lexists(current_path):
             self.deactivate(pkg)
-        os.symlink(pkg_path, current_path)
-        self.runscript(pkg, ver, "activate") 
+        self.log.info("Activating version %s of %s", ver, pkg)
+        try:
+            os.symlink(pkg_path, current_path)
+            self.runscript(pkg, ver, "activate")
+        except:
+            if revert and cur_ver:
+                self.log.error("Exception while activating.. reverting to %s", cur_ver)
+                self.activate(pkg, ver, revert=False)
+            raise
 
     def deactivate(self, pkg):
         current_path = os.path.join(self.install_path, pkg, "current")
