@@ -72,7 +72,7 @@ class Olut(object):
                     if pkgpath in ignored_files:
                         continue
                     
-                    self.log.info(pkgpath)
+                    self.log.debug(pkgpath)
                     fp.add(realpath, pkgpath)
             
             # Include files from the metadata/scripts path
@@ -117,7 +117,7 @@ class Olut(object):
             # starting with / or ..
             for name in fp.getnames():
                 if name.startswith("..") or name.startswith("/"):
-                    print "Ignoring invalid file", name
+                    self.log.warning("Ignoring invalid file %s", name)
                     continue
                 fp.extract(name, install_path)
         with open(os.path.join(install_path, ".olut/metadata.yaml"), "w") as fp:
@@ -171,7 +171,6 @@ class Olut(object):
         current_path = os.path.join(self.install_path, pkg, "current")
         pkg_path = os.path.join(self.install_path, pkg, ver)
         if os.path.lexists(current_path):
-            self.log.info("Deactivating current version of %s" % pkg)
             self.deactivate(pkg)
         os.symlink(pkg_path, current_path)
         self.runscript(pkg, ver, "activate") 
@@ -184,8 +183,9 @@ class Olut(object):
             return
         current_ver = self.get_current_version(pkg) 
         if not current_ver:
-            print "No current version"
+            self.log.info("No current version")
             return
+        self.log.info("Deactivating current version %s of %s" % (current_version, pkg))
         self.runscript(pkg, current_ver, "deactivate")
         if os.path.exists(current_path):
             os.unlink(current_path)
@@ -213,7 +213,7 @@ class Olut(object):
             self.log.error(out)
             raise Exception("Script %s return a non-zero return code %d" % (script, proc.returncode))
         else:
-            self.log.info(out)
+            self.log.debug(out)
     
     def find_versions(self, pkg, ver_spec):
         if os.path.exists(os.path.join(self.install_path, pkg, ver_spec)):
@@ -394,7 +394,8 @@ def build_parser():
     parser.add_option("-a", "--activate", dest="activate", help="Activate version on install (off by default)", default=False, action="store_true")
     parser.add_option("-m", "--meta", dest="meta", help="Additional meta data (name=value)", action="append")
     parser.add_option("-p", "--path", dest="path", help="Install path")
-    parser.add_option("-v", "--verbose", dest="verbose", default=False, help="Verbose output", action="store_true")
+    parser.add_option("-q", "--quoet", dest="quiet" help="Quiet output", default=False, action="store_true")
+    parser.add_option("-v", "--verbose", dest="verbose", help="Verbose output", default=False, action="store_true")
     return parser
 
 
@@ -406,9 +407,11 @@ def main():
     except IndexError:
         parser.error("must specify a command")
     if options.verbose:
-        logging.basicConfig(level=logging.INFO)
-    else:
+        logging.basicConfig(level=logging.DEBUG)
+    elif options.quiet:
         logging.basicConfig(level=logging.WARNING)
+    else:
+        logging.basicConfig(level=logging.INFO)
     olut = Olut(
         install_path = options.path,
     )
