@@ -42,7 +42,7 @@ class Olut(object):
             with open(metafile_path) as fp:
                 projmeta = yaml.load(fp)
                 if projmeta:
-                    meta.update(progmeta)
+                    meta.update(projmeta)
         if metaoverride:
             meta.update(metaoverride)
         meta["build_date"] = datetime.datetime.now()
