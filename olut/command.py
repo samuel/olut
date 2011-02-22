@@ -416,16 +416,24 @@ def build_parser():
     parser.add_option("-p", "--path", dest="path", help="Install path")
     parser.add_option("-q", "--quiet", dest="quiet", help="Quiet output", default=False, action="store_true")
     parser.add_option("-v", "--verbose", dest="verbose", help="Verbose output", default=False, action="store_true")
+    parser.add_option("-V", "--version", dest="version", help="Show version and exit", default=False, action="store_true")
     return parser
 
 
 def main():
     parser = build_parser()
     options, args = parser.parse_args()
+
+    if options.version:
+        from olut.version import VERSION
+        print "olut %s" % VERSION
+        sys.exit(0)
+
     try:
         command = args.pop(0)
     except IndexError:
         parser.error("must specify a command")
+
     if options.verbose:
         logging.basicConfig(level=logging.DEBUG)
     elif options.quiet:
