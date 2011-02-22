@@ -129,16 +129,20 @@ class Olut(object):
     
     def uninstall(self, pkg, ver):
         current_ver = self.get_current_version(pkg)
-        if current_ver == ver:
-            raise Exception("Can't uninstall the currently activated version. Must deactivate first.")
+        versions = self.find_versions(pkg, ver)
+        
+        for ver in versions:
+            if current_ver == ver:
+                raise Exception("Can't uninstall the currently activated version. Must deactivate first.")
+        
         pkg_path = os.path.join(self.install_path, pkg)
-        if ver == "*":
-            pass # TODO: Delete all versions
-        else:
+        
+        for ver in versions:
             ver_path = os.path.join(pkg_path, ver)
+            self.log.info("Uninstalling version %s of %s", pkg, ver)
             if os.path.exists(ver_path):
                 shutil.rmtree(ver_path)
-
+    
     def list(self):
         packages = self.get_installed_list()
         for name, info in packages.items():
@@ -228,6 +232,7 @@ class Olut(object):
     def find_versions(self, pkg, ver_spec):
         if os.path.exists(os.path.join(self.install_path, pkg, ver_spec)):
             return [ver_spec]
+
         versions = self.get_versions(pkg)
         if ver_spec[0] == '@':
             current_version = self.get_current_version(pkg)
@@ -242,6 +247,9 @@ class Olut(object):
             
             current_i = [x[0] for x in versions].index(current_version)
             return [versions[max(0, current_i+offset)][0]]
+        elif ver_spec[0] == "~":
+            last_n = int(ver_spec[1:])
+            return [x[0] for x in versions[last_n:]]
 
         try:
             ver_i = int(ver_spec)
@@ -249,6 +257,8 @@ class Olut(object):
             pass
         else:
             return [versions[ver_i][0]]
+
+        return []
     
     def get_git_ignored(self, path):
         p = subprocess.Popen("cd %s; git status --porcelain --ignored" % path, shell=True, stdout=subprocess.PIPE)
