@@ -127,13 +127,13 @@ class Olut(object):
         if activate:
             self.activate(meta["name"], meta["version"])
     
-    def uninstall(self, pkg, ver):
+    def uninstall(self, pkg, ver_spec):
         current_ver = self.get_current_version(pkg)
-        versions = self.find_versions(pkg, ver)
+        versions = self.find_versions(pkg, ver_spec)
         
         for ver in versions:
             if current_ver == ver:
-                raise Exception("Can't uninstall the currently activated version. Must deactivate first.")
+                raise Exception("Can't uninstall the currently activated version. Must deactivate it first.")
         
         pkg_path = os.path.join(self.install_path, pkg)
         
@@ -142,6 +142,10 @@ class Olut(object):
             self.log.info("Uninstalling version %s of %s", pkg, ver)
             if os.path.exists(ver_path):
                 shutil.rmtree(ver_path)
+    
+        if not self.get_versions(pkg):
+            self.log.info("Cleaning up package %s as it has no installe versions", pkg)
+            shutil.rmtree(pkg_path)
     
     def list(self):
         packages = self.get_installed_list()
@@ -234,7 +238,9 @@ class Olut(object):
             return [ver_spec]
 
         versions = self.get_versions(pkg)
-        if ver_spec[0] == '@':
+        if ver_spec == "*":
+            return [x[0] for x in versions]
+        elif ver_spec[0] == '@':
             current_version = self.get_current_version(pkg)
             if not current_version:
                 raise Exception("Trying to find version '%s' when no current version active for %s", ver_spec, pkg)
