@@ -139,7 +139,7 @@ class Olut(object):
         
         for ver in versions:
             ver_path = os.path.join(pkg_path, ver)
-            self.log.info("Uninstalling version %s of %s", pkg, ver)
+            self.log.info("Uninstalling version %s of %s", ver, pkg)
             if os.path.exists(ver_path):
                 shutil.rmtree(ver_path)
     
