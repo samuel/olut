@@ -48,7 +48,8 @@ class Olut(object):
         meta["build_date"] = datetime.datetime.now()
         
         # Build package tar.gz
-        ignored_files = set(meta.pop('ignored_files', []))
+        exclude_files = set(meta.pop('exclude_files', []))
+        include_files = set(meta.pop('include_files', []))
         outname = "%s-%s.tgz" % (meta["name"], meta["version"])
         outpath = os.path.join(outpath, outname)
         with closing(tarfile.open(outpath, "w:gz")) as fp:
@@ -57,11 +58,11 @@ class Olut(object):
                 if ".git" in dirs:
                     dirs.remove(".git")
                 for d in list(dirs):
-                    if d in ignored_files or (d+"/") in ignored_files:
+                    if d not in include_files and (d in exclude_files or (d+"/") in exclude_files):
                         dirs.remove(d)
 
                 pkgroot = root[len(sourcepath)+1:]
-                #if pkgroot in ignored_files or (pkgroot+"/") in ignored_files:
+                #if pkgroot in exclude_files or (pkgroot+"/") in exclude_files:
                 #    continue
 
                 for f in files:
@@ -69,7 +70,7 @@ class Olut(object):
                     pkgpath = os.path.join(pkgroot, f)
                     if self.ignore_filename_re.match(pkgpath):
                         continue
-                    if pkgpath in ignored_files:
+                    if pkgpath not in include_files and pkgpath in exclude_files:
                         continue
                     
                     self.log.debug(pkgpath)
@@ -318,7 +319,7 @@ class Olut(object):
             gitmeta["url"] = url
             meta["name"] = url.rsplit('/', 1)[-1].rsplit('.', 1)[0]
         
-        meta["ignored_files"] = self.get_git_ignored(path, ignoreunknown)
+        meta["exclude_files"] = self.get_git_ignored(path, ignoreunknown)
 
         return meta
     
