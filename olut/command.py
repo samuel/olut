@@ -25,7 +25,7 @@ class Olut(object):
         if isinstance(self.ignore_filename_re, basestring):
             self.ignore_filename_re = re.compile(self.ignore_filename_re)
 
-    def build(self, sourcepath, outpath=".", metapath="olut", metaoverride=None):
+    def build(self, sourcepath, outpath=".", metapath="olut", metaoverride=None, ignoreunknown=False):
         if not os.path.exists(outpath):
             os.makedirs(outpath)
         
@@ -34,7 +34,7 @@ class Olut(object):
             raise IOError("Source path does not exist")
         
         # read & generate meta
-        meta = self.get_git_meta(sourcepath)
+        meta = self.get_git_meta(sourcepath, ignoreunknown)
         if not metapath.startswith('/'):
             metapath = os.path.join(sourcepath, metapath)
         metafile_path = os.path.join(metapath, "metadata.yaml")
@@ -268,16 +268,17 @@ class Olut(object):
 
         return []
     
-    def get_git_ignored(self, path):
+    def get_git_ignored(self, path, ignoreunknown):
         p = subprocess.Popen("cd %s; git status --porcelain --ignored" % path, shell=True, stdout=subprocess.PIPE)
         out = p.communicate()[0]
         return [
             x.split(' ', 1)[1]
             for x in out.split("\n")
             if x.split(' ', 1)[0] == "!!"
+                or (ignoreunknown and x.split(' ', 1)[0] == "??")
         ]
 
-    def get_git_meta(self, path):
+    def get_git_meta(self, path, ignoreunknown=False):
         git_path = os.path.join(path, ".git")
         if not os.path.exists(git_path):
             return {}
@@ -317,7 +318,7 @@ class Olut(object):
             gitmeta["url"] = url
             meta["name"] = url.rsplit('/', 1)[-1].rsplit('.', 1)[0]
         
-        meta["ignored_files"] = self.get_git_ignored(path)
+        meta["ignored_files"] = self.get_git_ignored(path, ignoreunknown)
 
         return meta
     
