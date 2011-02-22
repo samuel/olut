@@ -36,4 +36,4 @@ Version Matching
 * 1 - one before the most recent
 * @- / @-1 - one before current
 * @++ / @+2 - two after current
-
+* ~5 - everything but the five most recent versions
