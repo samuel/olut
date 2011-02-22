@@ -255,8 +255,8 @@ class Olut(object):
             return [versions[max(0, current_i+offset)][0]]
         elif ":" in ver_spec:
             start, end = ver_spec.split(':')
-            start = int(start)
-            end = int(end)
+            start = int(start) if start else 0
+            end = int(end) if end else len(vesrions)
             return [x[0] for x in versions[start:end]]
 
         try:
