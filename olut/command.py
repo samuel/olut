@@ -253,9 +253,11 @@ class Olut(object):
             
             current_i = [x[0] for x in versions].index(current_version)
             return [versions[max(0, current_i+offset)][0]]
-        elif ver_spec[0] == "~":
-            last_n = int(ver_spec[1:])
-            return [x[0] for x in versions[last_n:]]
+        elif ":" in ver_spec:
+            start, end = ver_spec.split(':')
+            start = int(start)
+            end = int(end)
+            return [x[0] for x in versions[start:end]]
 
         try:
             ver_i = int(ver_spec)
