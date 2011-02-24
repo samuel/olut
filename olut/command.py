@@ -54,6 +54,17 @@ class Olut(object):
         outpath = os.path.join(outpath, outname)
         with closing(tarfile.open(outpath, "w:gz")) as fp:
             for root, dirs, files in os.walk(sourcepath):
+                pkgroot = root[len(sourcepath)+1:]
+
+                toremove = []
+                for d in dirs:
+                    realpath = os.path.join(root, d)
+                    if os.path.islink(realpath):
+                        fp.add(realpath, os.path.join(pkgroot, d))
+                        toremove.append(d)
+                for x in toremove:
+                    dirs.remove(x)
+
                 # Skip ignored directories
                 if ".git" in dirs:
                     dirs.remove(".git")
@@ -61,7 +72,6 @@ class Olut(object):
                     if d not in include_files and (d in exclude_files or (d+"/") in exclude_files):
                         dirs.remove(d)
 
-                pkgroot = root[len(sourcepath)+1:]
                 #if pkgroot in exclude_files or (pkgroot+"/") in exclude_files:
                 #    continue
 
