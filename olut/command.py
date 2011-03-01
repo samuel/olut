@@ -475,6 +475,7 @@ def main():
         logging.basicConfig(level=logging.INFO)
     olut = Olut(
         install_path = options.path,
+        gitdepth = options.gitdepth,
     )
     kwargs = {}
     if options.meta:
@@ -483,7 +484,6 @@ def main():
         )
     if options.activate:
         kwargs["activate"] = True
-    kwargs["gitdepth"] = options.gitdepth
     if command == "render":
         render_template(*args, **kwargs)
         sys.exit(0)
