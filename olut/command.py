@@ -292,14 +292,19 @@ class Olut(object):
 
     def get_git_meta(self, path, ignoreunknown=False):
         git_path = None
+        origpath = path
         for i in range(self.gitdepth):
             gp = os.path.join(path, ".git")
             if os.path.exists(gp):
                 git_path = gp
                 break
             path = os.path.dirname(path)
+
         if not git_path:
             return {}
+
+        chopped = len(origpath) - len(path)
+
         gitmeta = {"type": "git"}
         meta = {"scm": gitmeta}
         with open(os.path.join(git_path, "HEAD"), "rb") as fp:
@@ -336,7 +341,7 @@ class Olut(object):
             gitmeta["url"] = url
             meta["name"] = url.rsplit('/', 1)[-1].rsplit('.', 1)[0]
         
-        meta["exclude_files"] = self.get_git_ignored(path, ignoreunknown)
+        meta["exclude_files"] = [x[chopped:] for x in self.get_git_ignored(path, ignoreunknown)]
 
         return meta
     
