@@ -18,8 +18,9 @@ class Olut(object):
     DEFAULT_IGNORE_FILENAME_RE = re.compile(".*(\.py[co]|\.swp|~)$")
     DEFAULT_INSTALL_PATH = "/var/lib/olut"
     
-    def __init__(self, install_path=None, ignore_filename_re=None):
+    def __init__(self, install_path=None, ignore_filename_re=None, gitdepth=1):
         self.log = logging.getLogger("olut")
+        self.gitdepth = gitdepth
         self.install_path = install_path or os.getenv("OLUT_INSTALL_PATH") or self.DEFAULT_INSTALL_PATH
         self.ignore_filename_re = ignore_filename_re or os.getenv("OLUT_IGNORE_FILENAME_RE") or self.DEFAULT_IGNORE_FILENAME_RE
         if isinstance(self.ignore_filename_re, basestring):
@@ -290,8 +291,14 @@ class Olut(object):
         ]
 
     def get_git_meta(self, path, ignoreunknown=False):
-        git_path = os.path.join(path, ".git")
-        if not os.path.exists(git_path):
+        git_path = None
+        for i in range(self.gitdepth):
+            gp = os.path.join(path, ".git")
+            if os.path.exists(gp):
+                git_path = gp
+                break
+            path = os.path.dirname(path)
+        if not git_path:
             return {}
         gitmeta = {"type": "git"}
         meta = {"scm": gitmeta}
@@ -432,6 +439,7 @@ def render_template(source, dest=None, pkg_ver_path=None, metaoverride=None):
 def build_parser():
     parser = OptionParser(usage="Usage: %prog [options] <command> [arg1] [arg2]")
     parser.add_option("-a", "--activate", dest="activate", help="Activate version on install (off by default)", default=False, action="store_true")
+    parser.add_option("-g", "--gitdepth", dest="gitdepth", type="int", help="Number of directories upwards to check for .git", default=1)
     parser.add_option("-m", "--meta", dest="meta", help="Additional meta data (name=value)", action="append")
     parser.add_option("-p", "--path", dest="path", help="Install path")
     parser.add_option("-q", "--quiet", dest="quiet", help="Quiet output", default=False, action="store_true")
@@ -470,6 +478,7 @@ def main():
         )
     if options.activate:
         kwargs["activate"] = True
+    kwargs["gitdepth"] = options.gitdepth
     if command == "render":
         render_template(*args, **kwargs)
         sys.exit(0)
