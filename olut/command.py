@@ -161,7 +161,7 @@ class Olut(object):
     
     def list(self):
         packages = self.get_installed_list()
-        for name, info in packages.items():
+        for name, info in packages.iteritems():
             print name
             for version, meta in info["versions"]:
                 scm = meta.get('scm', {})
@@ -234,7 +234,7 @@ class Olut(object):
             HOME = os.environ["HOME"],
             PATH = os.environ["PATH"],
         )
-        for k, v in meta.items():
+        for k, v in meta.iteritems():
             if isinstance(v, (int, long, basestring)):
                 env["META_%s" % k.upper()] = str(v)
         proc = subprocess.Popen([script_path], env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -480,7 +480,7 @@ def main():
     kwargs = {}
     if options.meta:
         kwargs["metaoverride"] = dict(
-            x.split('=') for x in options.meta,
+            x.split('=') for x in options.meta
         )
     if options.activate:
         kwargs["activate"] = True
