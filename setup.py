@@ -10,8 +10,8 @@ setup(
     version = VERSION,
     description = 'Olut is a packging framework meant for deploying applications',
     author = 'Samuel Stauffer',
-    author_email = 'samuel@playhaven.com',
-    url = 'https://github.com/playhaven/olut',
+    author_email = 'samuel@descolada.com',
+    url = 'https://github.com/samuel/olut',
     packages = find_packages(),
     test_suite = "tests",
     entry_points = {
