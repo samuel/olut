@@ -234,7 +234,6 @@ class Olut(object):
             USER = os.environ["USER"],
             HOME = os.environ["HOME"],
             PATH = os.environ["PATH"],
-            SSH_AUTH_SOCK = os.getenv("SSH_AUTH_SOCK") or "",
         )
         if self.ssh_agent_forward:
             for k in ("SSH_AUTH_SOCK", "SSH_CLIENT", "SSH_CONNECTION", "SSH_TTY"):
