@@ -18,11 +18,12 @@ class Olut(object):
     DEFAULT_IGNORE_FILENAME_RE = re.compile(".*(\.py[co]|\.swp|~)$")
     DEFAULT_INSTALL_PATH = "/var/lib/olut"
     
-    def __init__(self, install_path=None, ignore_filename_re=None, gitdepth=1):
+    def __init__(self, install_path=None, ignore_filename_re=None, gitdepth=1, ssh_agent_forward=False):
         self.log = logging.getLogger("olut")
         self.gitdepth = gitdepth
         self.install_path = install_path or os.getenv("OLUT_INSTALL_PATH") or self.DEFAULT_INSTALL_PATH
         self.ignore_filename_re = ignore_filename_re or os.getenv("OLUT_IGNORE_FILENAME_RE") or self.DEFAULT_IGNORE_FILENAME_RE
+        self.ssh_agent_forward = ssh_agent_forward
         if isinstance(self.ignore_filename_re, basestring):
             self.ignore_filename_re = re.compile(self.ignore_filename_re)
 
@@ -235,6 +236,9 @@ class Olut(object):
             PATH = os.environ["PATH"],
             SSH_AUTH_SOCK = os.getenv("SSH_AUTH_SOCK") or "",
         )
+        if self.ssh_agent_forward:
+            for k in ("SSH_AUTH_SOCK", "SSH_CLIENT", "SSH_CONNECTION", "SSH_TTY"):
+                env[k] = os.getenv(k) or ""
         for k, v in meta.iteritems():
             if isinstance(v, (int, long, basestring)):
                 env["META_%s" % k.upper()] = str(v)
@@ -449,6 +453,7 @@ def build_parser():
     parser.add_option("-m", "--meta", dest="meta", help="Additional meta data (name=value)", action="append")
     parser.add_option("-p", "--path", dest="path", help="Install path")
     parser.add_option("-q", "--quiet", dest="quiet", help="Quiet output", default=False, action="store_true")
+    parser.add_option("-s", "--ssh", dest="ssh_agent_forward", help="Enable SSH agent forwarding (pass environment variables to scripts)", default=False, action="store_true")
     parser.add_option("-v", "--verbose", dest="verbose", help="Verbose output", default=False, action="store_true")
     parser.add_option("-V", "--version", dest="version", help="Show version and exit", default=False, action="store_true")
     return parser
@@ -477,6 +482,7 @@ def main():
     olut = Olut(
         install_path = options.path,
         gitdepth = options.gitdepth,
+        ssh_agent_forward = options.ssh_agent_forward,
     )
     kwargs = {}
     if options.meta:
