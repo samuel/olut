@@ -233,7 +233,7 @@ class Olut(object):
             USER = os.environ["USER"],
             HOME = os.environ["HOME"],
             PATH = os.environ["PATH"],
-            SSH_AUTH_SOCK = os.getenv("SSH_AUTH_SOCK"),
+            SSH_AUTH_SOCK = os.getenv("SSH_AUTH_SOCK") or "",
         )
         for k, v in meta.iteritems():
             if isinstance(v, (int, long, basestring)):
